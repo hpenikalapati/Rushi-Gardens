@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rushi Gardens - Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Seller Inventory Dashboard</h1>
+  <p>Manage produce availability and pricing per pound.</p>
+
+  <table id="adminTable" border="1" cellpadding="8">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Price ($ / lb)</th>
+        <th>In Stock?</th>
+      </tr>
+    </thead>
+    <tbody id="inventoryRows"></tbody>
+  </table>
+
+  <h3>Add New Produce</h3>
+  <input type="text" id="newName" placeholder="Item Name (e.g., Papaya)">
+  <input type="number" id="newPrice" step="0.01" placeholder="Price per lb">
+  <button id="addBtn">Add Item</button>
+
+  <br><br>
+  <button id="saveBtn" style="font-size: 1.1em;">Save Inventory</button>
+
+  <script src="products.js"></script>
+  <script>
+    let currentInventory = getInventory();
+
+    function renderAdmin() {
+      const tbody = document.getElementById('inventoryRows');
+      tbody.innerHTML = '';
+      currentInventory.forEach((p, idx) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${p.name}</td>
+          <td><input type="number" step="0.01" value="${p.pricePerLb}" onchange="updatePrice(${idx}, this.value)"></td>
+          <td><input type="checkbox" ${p.inStock ? 'checked' : ''} onchange="toggleStock(${idx}, this.checked)"></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function updatePrice(index, value) {
+      currentInventory[index].pricePerLb = parseFloat(value) || 0;
+    }
+
+    function toggleStock(index, isChecked) {
+      currentInventory[index].inStock = isChecked;
+    }
+
+    document.getElementById('addBtn').addEventListener('click', () => {
+      const name = document.getElementById('newName').value.trim();
+      const price = parseFloat(document.getElementById('newPrice').value) || 0;
+      if (name) {
+        currentInventory.push({
+          id: name.toLowerCase().replace(/\s+/g, '_'),
+          name: name,
+          pricePerLb: price,
+          inStock: true
+        });
+        renderAdmin();
+        document.getElementById('newName').value = '';
+        document.getElementById('newPrice').value = '';
+      }
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      saveInventory(currentInventory);
+      alert('Inventory settings saved successfully!');
+    });
+
+    renderAdmin();
+  </script>
+</body>
+</html>
