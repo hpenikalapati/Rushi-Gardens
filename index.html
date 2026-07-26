@@ -3,48 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rushi Gardens - Fresh Produce Order</title>
+  <title>Rushi Gardens - Order Produce</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
     <h1>🌿 Rushi Gardens</h1>
-    <p>Fresh Farm Produce — Order by the Pound</p>
+    <p>Fresh Produce — Ordered by the Pound</p>
   </header>
 
   <main>
     <h2>Available Produce</h2>
     <form id="orderForm">
-      <div id="productList"></div>
+      <div id="productList">Loading available items...</div>
 
       <div class="summary">
-        <h3>Total Estimated Price: $<span id="totalPrice">0.00</span></h3>
+        <h3>Total: $<span id="totalPrice">0.00</span></h3>
       </div>
 
       <h3>Customer Details</h3>
-      <label>Name: <input type="text" id="custName" required></label>
-      <label>Phone/Email: <input type="text" id="custContact" required></label>
+      <label>Name: <input type="text" id="custName" name="Customer Name" required></label>
+      <label>Phone: <input type="tel" id="custPhone" name="Customer Phone" required></label>
+      <label>Email: <input type="email" id="custEmail" name="Customer Email" required></label>
 
-      <button type="submit">Place Order</button>
+      <button type="submit" id="submitBtn">Submit & Send Order</button>
     </form>
   </main>
 
-  <script src="products.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  
   <script>
-    const inventory = getInventory().filter(p => p.inStock);
+    // Config: Paste your Firebase details here
+    const firebaseConfig = {
+      apiKey: "AIzaSyCzHvC09ahmaO2Btw7ofjyu4hhK2jh5sVI",
+      authDomain: "rushi-gardens.firebaseapp.com",
+      databaseURL: "https://rushi-gardens-default-rtdb.firebaseio.com",
+      projectId: "rushi-gardens",
+      storageBucket: "rushi-gardens.firebasestorage.app",
+      messagingSenderId: "346604079812",
+      appId: "1:346604079812:web:da377ab1e04d03f259d791",
+      measurementId: "G-KZ7YDLDT2J"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const formspreeEndpoint = "https://formspree.io/f/xdaqygyw";
+
     const container = document.getElementById('productList');
 
-    function renderStore() {
+    // Load available produce live from Firestore
+    db.collection('products').where('inStock', '==', true).onSnapshot(snapshot => {
       container.innerHTML = '';
-      inventory.forEach(p => {
+      if (snapshot.empty) {
+        container.innerHTML = '<p>No items in stock today. Please check back later!</p>';
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const p = doc.data();
         const item = document.createElement('div');
         item.className = 'product-item';
         item.innerHTML = `
           <label>
-            <strong>${p.name}</strong> ($${p.pricePerLb.toFixed(2)} / lb)
+            <strong>${p.name}</strong> ($${parseFloat(p.pricePerLb).toFixed(2)} / lb)
           </label>
           <input type="number" min="0" step="0.5" value="0" 
-                 data-price="${p.pricePerLb}" data-name="${p.name}" class="qty-input"> lbs
+                 data-id="${doc.id}" data-name="${p.name}" data-price="${p.pricePerLb}" class="qty-input"> lbs
         `;
         container.appendChild(item);
       });
@@ -52,7 +78,7 @@
       document.querySelectorAll('.qty-input').forEach(input => {
         input.addEventListener('input', calculateTotal);
       });
-    }
+    });
 
     function calculateTotal() {
       let total = 0;
@@ -64,27 +90,76 @@
       document.getElementById('totalPrice').innerText = total.toFixed(2);
     }
 
-    document.getElementById('orderForm').addEventListener('submit', (e) => {
+    document.getElementById('orderForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Processing Order...';
+
       const name = document.getElementById('custName').value;
-      const contact = document.getElementById('custContact').value;
-      let orderSummary = `Order from ${name} (${contact}):\n`;
+      const phone = document.getElementById('custPhone').value;
+      const email = document.getElementById('custEmail').value;
+      const total = document.getElementById('totalPrice').innerText;
+
+      let itemsOrdered = [];
+      let itemsSummaryString = '';
 
       document.querySelectorAll('.qty-input').forEach(input => {
         const lbs = parseFloat(input.value) || 0;
         if (lbs > 0) {
-          orderSummary += `- ${input.getAttribute('data-name')}: ${lbs} lbs\n`;
+          const itemName = input.getAttribute('data-name');
+          const unitPrice = parseFloat(input.getAttribute('data-price'));
+          const subtotal = lbs * unitPrice;
+
+          itemsOrdered.push({ name: itemName, lbs: lbs, pricePerLb: unitPrice, subtotal: subtotal });
+          itemsSummaryString += `${itemName}: ${lbs} lbs ($${subtotal.toFixed(2)})\n`;
         }
       });
 
-      orderSummary += `Total: $${document.getElementById('totalPrice').innerText}`;
-      
-      // Opens user's default email client pre-filled with order details
-      const mailtoUrl = `mailto:your-email@example.com?subject=New Order - ${encodeURIComponent(name)}&body=${encodeURIComponent(orderSummary)}`;
-      window.location.href = mailtoUrl;
-    });
+      if (itemsOrdered.length === 0) {
+        alert('Please select at least one produce item.');
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Submit & Send Order';
+        return;
+      }
 
-    renderStore();
+      const orderData = {
+        customerName: name,
+        customerPhone: phone,
+        customerEmail: email,
+        items: itemsOrdered,
+        totalAmount: parseFloat(total),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        status: 'Pending'
+      };
+
+      try {
+        // 1. Save to Firebase Database for Admin Panel
+        await db.collection('orders').add(orderData);
+
+        // 2. Post receipt directly to Formspree (Sends email to rushigardens@gmail.com)
+        await fetch(formspreeEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            _subject: `New Produce Order from ${name}`,
+            "Customer Name": name,
+            "Customer Phone": phone,
+            "Customer Email": email,
+            "Order Details": itemsSummaryString,
+            "Total Amount": `$${total}`
+          })
+        });
+
+        alert('Thank you! Your order has been submitted and a receipt was sent to Rushi Gardens.');
+        window.location.reload();
+      } catch (err) {
+        console.error("Order submission failed:", err);
+        alert('An error occurred submitting your order. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Submit & Send Order';
+      }
+    });
   </script>
 </body>
 </html>
