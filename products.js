@@ -17,7 +17,7 @@ const defaultProducts = [
   { id: 'jackfruit-pieces', name: 'Jackfruit Pieces', pricePerLb: 1.25, inStock: true },
   { id: 'tindora', name: 'Tindora', pricePerLb: 4.00, inStock: true },
   { id: 'paan-leaves', name: 'Paan Leaves', pricePerLb: 0.20, inStock: true },
-  { id: 'eggs', name: 'Eggs', pricePerLb: 9.00, inStock: true },
+  { id: 'eggs', name: 'Eggs', pricePerLb: 9.00, inStock: true }
 ];
 
 // Helper functions to manage LocalStorage persistence
