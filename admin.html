@@ -4,78 +4,137 @@
   <meta charset="UTF-8">
   <title>Rushi Gardens - Admin Dashboard</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .tab-btn { background: #e2e8f0; color: #2d3748; padding: 10px 20px; border: none; cursor: pointer; }
+    .tab-btn.active { background: #2f855a; color: white; }
+    .tab-content { display: none; margin-top: 20px; }
+    .tab-content.active { display: block; }
+    .order-card { border: 1px solid #cbd5e0; padding: 15px; margin-bottom: 15px; border-radius: 6px; background: #f8fafc; }
+  </style>
 </head>
 <body>
-  <h1>Seller Inventory Dashboard</h1>
-  <p>Manage produce availability and pricing per pound.</p>
+  <h1>Seller Dashboard</h1>
 
-  <table id="adminTable" border="1" cellpadding="8">
-    <thead>
-      <tr>
-        <th>Item</th>
-        <th>Price ($ / lb)</th>
-        <th>In Stock?</th>
-      </tr>
-    </thead>
-    <tbody id="inventoryRows"></tbody>
-  </table>
+  <div>
+    <button class="tab-btn active" onclick="switchTab('ordersTab', this)">📦 Order Summaries</button>
+    <button class="tab-btn" onclick="switchTab('inventoryTab', this)">🥦 Manage Inventory</button>
+  </div>
 
-  <h3>Add New Produce</h3>
-  <input type="text" id="newName" placeholder="Item Name (e.g., Papaya)">
-  <input type="number" id="newPrice" step="0.01" placeholder="Price per lb">
-  <button id="addBtn">Add Item</button>
+  <!-- ORDER SUMMARY SECTION -->
+  <div id="ordersTab" class="tab-content active">
+    <h2>Customer Order History</h2>
+    <div id="orderList">Loading order history...</div>
+  </div>
 
-  <br><br>
-  <button id="saveBtn" style="font-size: 1.1em;">Save Inventory</button>
+  <!-- INVENTORY MANAGEMENT SECTION -->
+  <div id="inventoryTab" class="tab-content">
+    <h2>Produce Catalog</h2>
+    <table border="1" cellpadding="8" style="width: 100%; text-align: left;">
+      <thead>
+        <tr>
+          <th>Produce</th>
+          <th>Price ($/lb)</th>
+          <th>In Stock?</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="adminInventory"></tbody>
+    </table>
 
-  <script src="products.js"></script>
+    <h3>Add New Item</h3>
+    <input type="text" id="addName" placeholder="Item Name (e.g. Guava)">
+    <input type="number" id="addPrice" step="0.01" placeholder="Price/lb">
+    <button onclick="addNewProduct()">Add Produce</button>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
   <script>
-    let currentInventory = getInventory();
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    function renderAdmin() {
-      const tbody = document.getElementById('inventoryRows');
-      tbody.innerHTML = '';
-      currentInventory.forEach((p, idx) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${p.name}</td>
-          <td><input type="number" step="0.01" value="${p.pricePerLb}" onchange="updatePrice(${idx}, this.value)"></td>
-          <td><input type="checkbox" ${p.inStock ? 'checked' : ''} onchange="toggleStock(${idx}, this.checked)"></td>
-        `;
-        tbody.appendChild(row);
-      });
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
     }
 
-    function updatePrice(index, value) {
-      currentInventory[index].pricePerLb = parseFloat(value) || 0;
-    }
-
-    function toggleStock(index, isChecked) {
-      currentInventory[index].inStock = isChecked;
-    }
-
-    document.getElementById('addBtn').addEventListener('click', () => {
-      const name = document.getElementById('newName').value.trim();
-      const price = parseFloat(document.getElementById('newPrice').value) || 0;
-      if (name) {
-        currentInventory.push({
-          id: name.toLowerCase().replace(/\s+/g, '_'),
-          name: name,
-          pricePerLb: price,
-          inStock: true
-        });
-        renderAdmin();
-        document.getElementById('newName').value = '';
-        document.getElementById('newPrice').value = '';
+    // Load Live Orders Summary
+    db.collection('orders').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
+      const list = document.getElementById('orderList');
+      list.innerHTML = '';
+      if (snapshot.empty) {
+        list.innerHTML = '<p>No orders placed yet.</p>';
+        return;
       }
+
+      snapshot.forEach(doc => {
+        const o = doc.data();
+        const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString() : 'Just now';
+        
+        let itemDetailsHtml = '<ul>';
+        o.items.forEach(i => {
+          itemDetailsHtml += `<li>${i.name}: <strong>${i.lbs} lbs</strong> ($${i.subtotal.toFixed(2)})</li>`;
+        });
+        itemDetailsHtml += '</ul>';
+
+        const card = document.createElement('div');
+        card.className = 'order-card';
+        card.innerHTML = `
+          <h3>Order #${doc.id.substring(0, 6)} — <span style="color:#2f855a;">$${o.totalAmount.toFixed(2)}</span></h3>
+          <p><strong>Date:</strong> ${date}</p>
+          <p><strong>Customer:</strong> ${o.customerName} | <strong>Phone:</strong> ${o.customerPhone} | <strong>Email:</strong> ${o.customerEmail}</p>
+          <h4>Items Ordered:</h4>
+          ${itemDetailsHtml}
+        `;
+        list.appendChild(card);
+      });
     });
 
-    document.getElementById('saveBtn').addEventListener('click', () => {
-      saveInventory(currentInventory);
-      alert('Inventory settings saved successfully!');
+    // Load Live Inventory Management
+    db.collection('products').onSnapshot(snapshot => {
+      const tbody = document.getElementById('adminInventory');
+      tbody.innerHTML = '';
+      snapshot.forEach(doc => {
+        const p = doc.data();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.name}</td>
+          <td><input type="number" step="0.01" value="${p.pricePerLb}" id="price-${doc.id}"></td>
+          <td><input type="checkbox" ${p.inStock ? 'checked' : ''} id="stock-${doc.id}"></td>
+          <td><button onclick="updateProduct('${doc.id}')">Update</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
     });
 
-    renderAdmin();
+    async function updateProduct(id) {
+      const price = parseFloat(document.getElementById(`price-${id}`).value) || 0;
+      const inStock = document.getElementById(`stock-${id}`).checked;
+      await db.collection('products').doc(id).update({ pricePerLb: price, inStock: inStock });
+      alert('Updated product!');
+    }
+
+    async function addNewProduct() {
+      const name = document.getElementById('addName').value.trim();
+      const price = parseFloat(document.getElementById('addPrice').value) || 0;
+      if (name) {
+        await db.collection('products').add({ name: name, pricePerLb: price, inStock: true });
+        document.getElementById('addName').value = '';
+        document.getElementById('addPrice').value = '';
+      }
+    }
   </script>
 </body>
 </html>
