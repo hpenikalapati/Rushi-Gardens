@@ -1,8 +1,8 @@
 const defaultProducts = [
-  { id: 'okra', name: 'Okra', pricePerLb: 2.99, inStock: true },
+  { id: 'green-okra', name: 'Green Okra', pricePerLb: 3.50, inStock: true },
   { id: 'eggplant', name: 'Eggplant', pricePerLb: 1.99, inStock: true },
-  { id: 'gongura', name: 'Gongura', pricePerLb: 3.49, inStock: true },
-  { id: 'mango', name: 'Mangos', pricePerLb: 4.99, inStock: true },
+  { id: 'gongura', name: 'Gongura', pricePerLb: 7, inStock: true },
+  { id: 'mango', name: 'Mangos', pricePerLb: 6, inStock: true },
   { id: 'tomato', name: 'Tomatoes', pricePerLb: 1.49, inStock: true },
   { id: 'guava', name: 'Guavas', pricePerLb: 3.99, inStock: true },
   { id: 'lychee', name: 'Lychees', pricePerLb: 5.99, inStock: false }
