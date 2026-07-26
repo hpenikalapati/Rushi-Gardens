@@ -1,0 +1,47 @@
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  max-width: 650px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  color: #2d3748;
+}
+
+header {
+  text-align: center;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 1.5rem;
+}
+
+.product-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.product-item input {
+  width: 70px;
+  padding: 4px;
+}
+
+.summary {
+  background-color: #f7fafc;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  border-radius: 6px;
+  text-align: right;
+}
+
+button {
+  background-color: #2f855a;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #276749;
+}
