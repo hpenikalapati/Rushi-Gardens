@@ -96,15 +96,15 @@
     ];
 
   // 1. Delete existing items in Firestore
-  const snapshot = await db.collection('products').get();
-  const deletePromises = snapshot.docs.map(doc => doc.ref.delete());
-  await Promise.all(deletePromises);
+    const snapshot = await db.collection('products').get();
+    const deletePromises = snapshot.docs.map(doc => doc.ref.delete());
+    await Promise.all(deletePromises);
 
   // 2. Upload new default products
-  const addPromises = defaultProducts.map(p => db.collection('products').add(p));
-  await Promise.all(addPromises);
+    const addPromises = defaultProducts.map(p => db.collection('products').add(p));
+    await Promise.all(addPromises);
 
-  alert('Firebase inventory successfully updated with new produce list!');
+    alert('Firebase inventory successfully updated with new produce list!');
 }
 
 // Uncomment the line below, refresh admin.html once, then re-comment it!
