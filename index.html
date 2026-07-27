@@ -53,32 +53,46 @@
 
     const container = document.getElementById('productList');
 
-    // Load available produce live from Firestore
-    db.collection('products').where('inStock', '==', true).orderBy('name', 'asc').onSnapshot(snapshot => {
-      container.innerHTML = '';
-      if (snapshot.empty) {
-        container.innerHTML = '<p>No items in stock today. Please check back later!</p>';
-        return;
-      }
+// Load available produce and sort A-Z using JavaScript
+db.collection('products')
+  .where('inStock', '==', true)
+  .onSnapshot(snapshot => {
+    container.innerHTML = '';
+    
+    if (snapshot.empty) {
+      container.innerHTML = '<p>No items in stock today. Please check back later!</p>';
+      return;
+    }
 
-      snapshot.forEach(doc => {
-        const p = doc.data();
-        const item = document.createElement('div');
-        item.className = 'product-item';
-        item.innerHTML = `
-          <label>
-            <strong>${p.name}</strong> ($${parseFloat(p.pricePerLb).toFixed(2)} / lb)
-          </label>
-          <input type="number" min="0" step="0.5" value="0" 
-                 data-id="${doc.id}" data-name="${p.name}" data-price="${p.pricePerLb}" class="qty-input"> lbs
-        `;
-        container.appendChild(item);
-      });
-
-      document.querySelectorAll('.qty-input').forEach(input => {
-        input.addEventListener('input', calculateTotal);
-      });
+    // Convert Firestore docs to an array
+    const products = [];
+    snapshot.forEach(doc => {
+      products.push({ id: doc.id, ...doc.data() });
     });
+
+    // Sort items alphabetically (A-Z) by name
+    products.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Render items to the page
+    products.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'product-item';
+      item.innerHTML = `
+        <label>
+          <strong>${p.name}</strong> ($${parseFloat(p.pricePerLb).toFixed(2)} / lb)
+        </label>
+        <input type="number" min="0" step="0.5" value="0" 
+               data-id="${p.id}" data-name="${p.name}" data-price="${p.pricePerLb}" class="qty-input"> lbs
+      `;
+      container.appendChild(item);
+    });
+
+    document.querySelectorAll('.qty-input').forEach(input => {
+      input.addEventListener('input', calculateTotal);
+    });
+  }, error => {
+    console.error("Firestore Error:", error);
+  });
 
     function calculateTotal() {
       let total = 0;
