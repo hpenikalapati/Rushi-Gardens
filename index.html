@@ -93,10 +93,10 @@
     // Helper function to detect unit label and input step
     function getItemUnitConfig(itemName) {
       const lower = itemName.toLowerCase();
-      if (lower.includes('paan')) {
-        return { label: 'leaf', step: '1', displayPrice: '/ leaf' };
+      if (lower.includes('leaves')) {
+        return { label: 'leaves', step: '1', displayPrice: '/ leaves' };
       }
-      return { label: 'lbs', step: '0.5', displayPrice: '/ lb' };
+      return { label: 'lbs', step: '1', displayPrice: '/ lb' };
     }
 
     db.collection('products').onSnapshot(snapshot => {
