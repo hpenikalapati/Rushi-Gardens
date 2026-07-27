@@ -53,46 +53,58 @@
 
     const container = document.getElementById('productList');
 
-// Load available produce and sort A-Z using JavaScript
-db.collection('products')
-  .where('inStock', '==', true)
-  .onSnapshot(snapshot => {
-    container.innerHTML = '';
-    
-    if (snapshot.empty) {
-      container.innerHTML = '<p>No items in stock today. Please check back later!</p>';
-      return;
+// Load and render produce on the buyer page
+db.collection('products').onSnapshot(snapshot => {
+  container.innerHTML = '';
+
+  if (snapshot.empty) {
+    container.innerHTML = '<p>No items found in database.</p>';
+    return;
+  }
+
+  // 1. Extract and filter only items that are explicitly in stock
+  const availableProducts = [];
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    // Handles true booleans or string "true" safely
+    if (data.inStock === true || data.inStock === "true") {
+      availableProducts.push({ id: doc.id, ...data });
     }
-
-    // Convert Firestore docs to an array
-    const products = [];
-    snapshot.forEach(doc => {
-      products.push({ id: doc.id, ...doc.data() });
-    });
-
-    // Sort items alphabetically (A-Z) by name
-    products.sort((a, b) => a.name.localeCompare(b.name));
-
-    // Render items to the page
-    products.forEach(p => {
-      const item = document.createElement('div');
-      item.className = 'product-item';
-      item.innerHTML = `
-        <label>
-          <strong>${p.name}</strong> ($${parseFloat(p.pricePerLb).toFixed(2)} / lb)
-        </label>
-        <input type="number" min="0" step="0.5" value="0" 
-               data-id="${p.id}" data-name="${p.name}" data-price="${p.pricePerLb}" class="qty-input"> lbs
-      `;
-      container.appendChild(item);
-    });
-
-    document.querySelectorAll('.qty-input').forEach(input => {
-      input.addEventListener('input', calculateTotal);
-    });
-  }, error => {
-    console.error("Firestore Error:", error);
   });
+
+  if (availableProducts.length === 0) {
+    container.innerHTML = '<p>No items in stock today. Please check back later!</p>';
+    return;
+  }
+
+  // 2. Sort items alphabetically (A to Z)
+  availableProducts.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+  // 3. Render items to the storefront
+  availableProducts.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'product-item';
+    const price = parseFloat(p.pricePerLb) || 0;
+
+    item.innerHTML = `
+      <label>
+        <strong>${p.name}</strong> ($${price.toFixed(2)} / lb)
+      </label>
+      <input type="number" min="0" step="0.5" value="0" 
+             data-id="${p.id}" data-name="${p.name}" data-price="${price}" class="qty-input"> lbs
+    `;
+    container.appendChild(item);
+  });
+
+  // Re-attach listener for price calculations
+  document.querySelectorAll('.qty-input').forEach(input => {
+    input.addEventListener('input', calculateTotal);
+  });
+
+}, error => {
+  console.error("Firestore Error:", error);
+  container.innerHTML = `<p style="color: red;">Error loading products: ${error.message}</p>`;
+});
 
     function calculateTotal() {
       let total = 0;
