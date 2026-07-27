@@ -54,7 +54,7 @@
     const container = document.getElementById('productList');
 
     // Load available produce live from Firestore
-    db.collection('products').where('inStock', '==', true).onSnapshot(snapshot => {
+    db.collection('products').where('inStock', '==', true).orderBy('name', 'asc').onSnapshot(snapshot => {
       container.innerHTML = '';
       if (snapshot.empty) {
         container.innerHTML = '<p>No items in stock today. Please check back later!</p>';
