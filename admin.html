@@ -58,6 +58,20 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCzHvC09ahmaO2Btw7ofjyu4hhK2jh5sVI",
+      authDomain: "rushi-gardens.firebaseapp.com",
+      databaseURL: "https://rushi-gardens-default-rtdb.firebaseio.com",
+      projectId: "rushi-gardens",
+      storageBucket: "rushi-gardens.firebasestorage.app",
+      messagingSenderId: "346604079812",
+      appId: "1:346604079812:web:da377ab1e04d03f259d791",
+      measurementId: "G-KZ7YDLDT2J"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    
     async function seedFirebaseInventory() {
   const defaultProducts = [
     { name: 'Green Okra', pricePerLb: 3.50, inStock: true },
@@ -95,16 +109,6 @@
 
 // Uncomment the line below, refresh admin.html once, then re-comment it!
 seedFirebaseInventory();
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
 
     function switchTab(tabId, btn) {
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
