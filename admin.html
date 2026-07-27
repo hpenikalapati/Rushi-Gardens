@@ -150,7 +150,7 @@
     });
 
     // 2. Load Live Inventory Management
-    db.collection('products').onSnapshot(snapshot => {
+    db.collection('products').orderBy('name', 'asc').onSnapshot(snapshot => {
       const tbody = document.getElementById('adminInventory');
       tbody.innerHTML = '';
       snapshot.forEach(doc => {
