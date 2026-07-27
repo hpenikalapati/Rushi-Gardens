@@ -5,11 +5,17 @@
   <title>Rushi Gardens - Admin Dashboard</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    .tab-btn { background: #e2e8f0; color: #2d3748; padding: 10px 20px; border: none; cursor: pointer; }
-    .tab-btn.active { background: #2f855a; color: white; }
+    .tab-btn { background: #e2e8f0; color: #2d3748; padding: 10px 20px; border: none; cursor: pointer; border-radius: 4px 4px 0 0; }
+    .tab-btn.active { background: #2f855a; color: white; font-weight: bold; }
     .tab-content { display: none; margin-top: 20px; }
     .tab-content.active { display: block; }
     .order-card { border: 1px solid #cbd5e0; padding: 15px; margin-bottom: 15px; border-radius: 6px; background: #f8fafc; }
+    
+    /* Action Buttons Styling */
+    .btn-update { background-color: #2f855a; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+    .btn-update:hover { background-color: #276749; }
+    .btn-delete { background-color: #e53e3e; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 6px; }
+    .btn-delete:hover { background-color: #c53030; }
   </style>
 </head>
 <body>
@@ -29,22 +35,22 @@
   <!-- INVENTORY MANAGEMENT SECTION -->
   <div id="inventoryTab" class="tab-content">
     <h2>Produce Catalog</h2>
-    <table border="1" cellpadding="8" style="width: 100%; text-align: left;">
+    <table border="1" cellpadding="8" style="width: 100%; text-align: left; border-collapse: collapse;">
       <thead>
-        <tr>
+        <tr style="background-color: #edf2f7;">
           <th>Produce</th>
           <th>Price ($/lb)</th>
           <th>In Stock?</th>
-          <th>Action</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="adminInventory"></tbody>
     </table>
 
-    <h3>Add New Item</h3>
+    <h3 style="margin-top: 2rem;">Add New Produce Item</h3>
     <input type="text" id="addName" placeholder="Item Name (e.g. Guava)">
     <input type="number" id="addPrice" step="0.01" placeholder="Price/lb">
-    <button onclick="addNewProduct()">Add Produce</button>
+    <button onclick="addNewProduct()" style="background-color: #2b6cb0;">Add Produce</button>
   </div>
 
   <!-- Firebase SDKs -->
@@ -70,7 +76,7 @@
       btn.classList.add('active');
     }
 
-    // Load Live Orders Summary
+    // 1. Load Live Orders Summary
     db.collection('orders').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
       const list = document.getElementById('orderList');
       list.innerHTML = '';
@@ -102,7 +108,7 @@
       });
     });
 
-    // Load Live Inventory Management
+    // 2. Load Live Inventory Management
     db.collection('products').onSnapshot(snapshot => {
       const tbody = document.getElementById('adminInventory');
       tbody.innerHTML = '';
@@ -110,29 +116,60 @@
         const p = doc.data();
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${p.name}</td>
-          <td><input type="number" step="0.01" value="${p.pricePerLb}" id="price-${doc.id}"></td>
+          <td><strong>${p.name}</strong></td>
+          <td><input type="number" step="0.01" value="${p.pricePerLb}" id="price-${doc.id}" style="width: 80px;"></td>
           <td><input type="checkbox" ${p.inStock ? 'checked' : ''} id="stock-${doc.id}"></td>
-          <td><button onclick="updateProduct('${doc.id}')">Update</button></td>
+          <td>
+            <button class="btn-update" onclick="updateProduct('${doc.id}')">Update</button>
+            <button class="btn-delete" onclick="deleteProduct('${doc.id}', '${p.name.replace(/'/g, "\\'")}')">Delete</button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
     });
 
+    // Update Price or In Stock status
     async function updateProduct(id) {
       const price = parseFloat(document.getElementById(`price-${id}`).value) || 0;
       const inStock = document.getElementById(`stock-${id}`).checked;
-      await db.collection('products').doc(id).update({ pricePerLb: price, inStock: inStock });
-      alert('Updated product!');
+      try {
+        await db.collection('products').doc(id).update({ pricePerLb: price, inStock: inStock });
+        alert('Product updated successfully!');
+      } catch (err) {
+        console.error("Error updating product:", err);
+        alert('Failed to update product.');
+      }
     }
 
+    // Delete item permanently from database
+    async function deleteProduct(id, productName) {
+      const confirmed = confirm(`Are you sure you want to permanently delete "${productName}" from your inventory?`);
+      if (confirmed) {
+        try {
+          await db.collection('products').doc(id).delete();
+          alert(`"${productName}" has been removed from inventory.`);
+        } catch (err) {
+          console.error("Error deleting product:", err);
+          alert('Failed to delete product.');
+        }
+      }
+    }
+
+    // Add a new product
     async function addNewProduct() {
       const name = document.getElementById('addName').value.trim();
       const price = parseFloat(document.getElementById('addPrice').value) || 0;
       if (name) {
-        await db.collection('products').add({ name: name, pricePerLb: price, inStock: true });
-        document.getElementById('addName').value = '';
-        document.getElementById('addPrice').value = '';
+        try {
+          await db.collection('products').add({ name: name, pricePerLb: price, inStock: true });
+          document.getElementById('addName').value = '';
+          document.getElementById('addPrice').value = '';
+        } catch (err) {
+          console.error("Error adding product:", err);
+          alert('Failed to add product.');
+        }
+      } else {
+        alert('Please enter a product name.');
       }
     }
   </script>
