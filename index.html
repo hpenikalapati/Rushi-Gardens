@@ -5,11 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rushi Gardens - Order Produce</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Customer Form Clean Layout */
+    .customer-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 400px;
+      margin-top: 10px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-group label {
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+    .form-group input {
+      padding: 8px;
+      font-size: 1em;
+      border: 1px solid #cbd5e0;
+      border-radius: 4px;
+    }
+  </style>
 </head>
 <body>
   <header>
     <h1>🌿 Rushi Gardens</h1>
-    <p>Fresh Produce — Ordered by the Pound</p>
+    <p>Fresh Produce — Order by the Pound or Piece</p>
   </header>
 
   <main>
@@ -22,10 +47,24 @@
       </div>
 
       <h3>Customer Details</h3>
-      <label>Name: <input type="text" id="custName" name="Customer Name" required></label>
-      <label>Phone: <input type="tel" id="custPhone" name="Customer Phone" required></label>
-      <label>Email: <input type="email" id="custEmail" name="Customer Email" required></label>
+      <div class="customer-form">
+        <div class="form-group">
+          <label for="custName">Name:</label>
+          <input type="text" id="custName" name="Customer Name" placeholder="Your Full Name" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="custPhone">Phone Number:</label>
+          <input type="tel" id="custPhone" name="Customer Phone" placeholder="(123) 456-7890" required>
+        </div>
 
+        <div class="form-group">
+          <label for="custEmail">Email Address:</label>
+          <input type="email" id="custEmail" name="Customer Email" placeholder="you@example.com" required>
+        </div>
+      </div>
+
+      <br>
       <button type="submit" id="submitBtn">Submit & Send Order</button>
     </form>
   </main>
@@ -33,9 +72,8 @@
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  
+
   <script>
-    // Config: Paste your Firebase details here
     const firebaseConfig = {
       apiKey: "AIzaSyCzHvC09ahmaO2Btw7ofjyu4hhK2jh5sVI",
       authDomain: "rushi-gardens.firebaseapp.com",
@@ -50,68 +88,78 @@
     const db = firebase.firestore();
 
     const formspreeEndpoint = "https://formspree.io/f/xdaqygyw";
-
     const container = document.getElementById('productList');
 
-// Load and render produce on the buyer page
-db.collection('products').onSnapshot(snapshot => {
-  container.innerHTML = '';
-
-  if (snapshot.empty) {
-    container.innerHTML = '<p>No items found in database.</p>';
-    return;
-  }
-
-  // 1. Extract and filter only items that are explicitly in stock
-  const availableProducts = [];
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    // Handles true booleans or string "true" safely
-    if (data.inStock === true || data.inStock === "true") {
-      availableProducts.push({ id: doc.id, ...data });
+    // Helper function to detect unit label and input step
+    function getItemUnitConfig(itemName) {
+      const lower = itemName.toLowerCase();
+      if (lower.includes('paan')) {
+        return { label: 'leaf', step: '1', displayPrice: '/ leaf' };
+      }
+      if (lower.includes('egg')) {
+        return { label: 'egg', step: '1', displayPrice: '/ egg' };
+      }
+      return { label: 'lbs', step: '0.5', displayPrice: '/ lb' };
     }
-  });
 
-  if (availableProducts.length === 0) {
-    container.innerHTML = '<p>No items in stock today. Please check back later!</p>';
-    return;
-  }
+    db.collection('products').onSnapshot(snapshot => {
+      container.innerHTML = '';
 
-  // 2. Sort items alphabetically (A to Z)
-  availableProducts.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      if (snapshot.empty) {
+        container.innerHTML = '<p>No items found in database.</p>';
+        return;
+      }
 
-  // 3. Render items to the storefront
-  availableProducts.forEach(p => {
-    const item = document.createElement('div');
-    item.className = 'product-item';
-    const price = parseFloat(p.pricePerLb) || 0;
+      const availableProducts = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.inStock === true || data.inStock === "true") {
+          availableProducts.push({ id: doc.id, ...data });
+        }
+      });
 
-    item.innerHTML = `
-      <label>
-        <strong>${p.name}</strong> ($${price.toFixed(2)} / lb)
-      </label>
-      <input type="number" min="0" step="0.5" value="0" 
-             data-id="${p.id}" data-name="${p.name}" data-price="${price}" class="qty-input"> lbs
-    `;
-    container.appendChild(item);
-  });
+      if (availableProducts.length === 0) {
+        container.innerHTML = '<p>No items in stock today. Please check back later!</p>';
+        return;
+      }
 
-  // Re-attach listener for price calculations
-  document.querySelectorAll('.qty-input').forEach(input => {
-    input.addEventListener('input', calculateTotal);
-  });
+      // Sort alphabetically A-Z
+      availableProducts.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-}, error => {
-  console.error("Firestore Error:", error);
-  container.innerHTML = `<p style="color: red;">Error loading products: ${error.message}</p>`;
-});
+      // Render items
+      availableProducts.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'product-item';
+        const price = parseFloat(p.pricePerLb) || 0;
+        const unitConfig = getItemUnitConfig(p.name);
+
+        item.innerHTML = `
+          <label>
+            <strong>${p.name}</strong> ($${price.toFixed(2)} ${unitConfig.displayPrice})
+          </label>
+          <span>
+            <input type="number" min="0" step="${unitConfig.step}" value="0" 
+                   data-id="${p.id}" data-name="${p.name}" data-price="${price}" data-unit="${unitConfig.label}" class="qty-input"> ${unitConfig.label}
+          </span>
+        `;
+        container.appendChild(item);
+      });
+
+      document.querySelectorAll('.qty-input').forEach(input => {
+        input.addEventListener('input', calculateTotal);
+      });
+
+    }, error => {
+      console.error("Firestore Error:", error);
+      container.innerHTML = `<p style="color: red;">Error loading products: ${error.message}</p>`;
+    });
 
     function calculateTotal() {
       let total = 0;
       document.querySelectorAll('.qty-input').forEach(input => {
-        const lbs = parseFloat(input.value) || 0;
+        const qty = parseFloat(input.value) || 0;
         const price = parseFloat(input.getAttribute('data-price'));
-        total += lbs * price;
+        total += qty * price;
       });
       document.getElementById('totalPrice').innerText = total.toFixed(2);
     }
@@ -131,14 +179,15 @@ db.collection('products').onSnapshot(snapshot => {
       let itemsSummaryString = '';
 
       document.querySelectorAll('.qty-input').forEach(input => {
-        const lbs = parseFloat(input.value) || 0;
-        if (lbs > 0) {
+        const qty = parseFloat(input.value) || 0;
+        if (qty > 0) {
           const itemName = input.getAttribute('data-name');
           const unitPrice = parseFloat(input.getAttribute('data-price'));
-          const subtotal = lbs * unitPrice;
+          const unitLabel = input.getAttribute('data-unit');
+          const subtotal = qty * unitPrice;
 
-          itemsOrdered.push({ name: itemName, lbs: lbs, pricePerLb: unitPrice, subtotal: subtotal });
-          itemsSummaryString += `${itemName}: ${lbs} lbs ($${subtotal.toFixed(2)})\n`;
+          itemsOrdered.push({ name: itemName, qty: qty, unit: unitLabel, pricePerUnit: unitPrice, subtotal: subtotal });
+          itemsSummaryString += `${itemName}: ${qty} ${unitLabel} ($${subtotal.toFixed(2)})\n`;
         }
       });
 
@@ -160,10 +209,8 @@ db.collection('products').onSnapshot(snapshot => {
       };
 
       try {
-        // 1. Save to Firebase Database for Admin Panel
         await db.collection('orders').add(orderData);
 
-        // 2. Post receipt directly to Formspree (Sends email to rushigardens@gmail.com)
         await fetch(formspreeEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
