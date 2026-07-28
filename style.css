@@ -12,6 +12,12 @@ header {
   margin-bottom: 1.5rem;
 }
 
+.header-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
 .product-item {
   display: flex;
   justify-content: space-between;
@@ -40,6 +46,14 @@ button {
   padding: 0.75rem 1.5rem;
   border-radius: 4px;
   cursor: pointer;
+}
+
+/* Header Logo Layout */
+.logo-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
 button:hover {
