@@ -21,8 +21,9 @@ header {
 }
 
 .header-logo {
-  width: 48px;
-  height: 48px;
+  height: 48px !important;
+  width: auto !important;
+  max-width: 100% !important;
   object-fit: contain;
 }
 
